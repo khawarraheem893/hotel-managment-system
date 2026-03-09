@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>User Dashboard - Hotel Booking</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <!-- ==========================================
+       HEADER & NAVIGATION
+       ========================================== -->
+  <header>
+    <nav>
+      <a href="user-dashboard.html" class="logo">🏨 HotelBook</a>
+      <ul class="nav-links">
+        <li><a href="rooms.html">Browse Rooms</a></li>
+        <li><a href="#" onclick="logout()">Logout</a></li>
+      </ul>
+    </nav>
+  </header>
+
+  <!-- ==========================================
+       MAIN CONTAINER
+       ========================================== -->
+  <div class="container">
+    <!-- ==========================================
+         WELCOME SECTION
+         ========================================== -->
+    <div class="card">
+      <h1>Welcome, <span id="userName">Guest</span>! 👋</h1>
+      <p id="userEmail"></p>
+      <p>Manage your bookings and explore our rooms below.</p>
+    </div>
+
+    <!-- ==========================================
+         QUICK ACTIONS
+         ========================================== -->
+    <div class="grid">
+      <div class="card">
+        <h3>📅 Browse Rooms</h3>
+        <p>Check availability and see our latest rooms with dynamic pricing</p>
+        <a href="rooms.html" class="btn btn-primary">Browse Now</a>
+      </div>
+      <div class="card">
+        <h3>🔄 My Bookings</h3>
+        <p>View and manage all your current and past bookings</p>
+        <a href="#myBookings" class="btn btn-primary">View Bookings</a>
+      </div>
+    </div>
+
+    <!-- ==========================================
+         MY BOOKINGS SECTION
+         ========================================== -->
+    <div class="card">
+      <h2>📋 My Bookings</h2>
+      <div id="bookingsContainer">
+        <p>Loading your bookings...</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==========================================
+       FOOTER
+       ========================================== -->
+  <footer>
+    <p>&copy; 2026 Hotel Booking System. All rights reserved.</p>
+  </footer>
+
+  <!-- ==========================================
+       SCRIPTS
+       ========================================== -->
+  <script src="js/utils.js"></script>
+  <script>
+    // ==========================================
+    // PAGE INITIALIZATION
+    // ==========================================
+
+    document.addEventListener('DOMContentLoaded', () => {
+      // Check if user is logged in
+      checkAuthenticationStatus();
+
+      // Load user profile
+      loadUserProfile();
+
+      // Load user's bookings
+      loadUserBookings();
+    });
+
+    // ==========================================
+    // LOAD USER PROFILE
+    // Display user's name and email
+    // ==========================================
+
+    async function loadUserProfile() {
+      try {
+        const user = getUserProfile(); // Get from localStorage
+
+        if (user) {
+          document.getElementById('userName').textContent = user.name;
+          document.getElementById('userEmail').textContent = `Email: ${user.email}`;
+        }
+      } catch (error) {
+        console.error('Error loading profile:', error);
+      }
+    }
+
+    // ==========================================
+    // LOAD USER BOOKINGS
+    // Fetch all bookings from backend API
+    // ==========================================
+
+    async function loadUserBookings() {
+      try {
+        // Fetch bookings from API (requires authentication)
+        const response = await apiRequest(
+          '/bookings',
+          'GET',
+          null,
+          true // Requires authentication
+        );
+
+        const bookings = response.bookings || [];
+        const container = document.getElementById('bookingsContainer');
+
+        // If no bookings, show message
+        if (bookings.length === 0) {
+          container.innerHTML = `
+            <p>You don't have any bookings yet.</p>
+            <a href="rooms.html" class="btn btn-primary">Book a Room Now</a>
+          `;
+          return;
+        }
+
+        // Display all bookings in a table
+        let html = `
+          <table>
+            <thead>
+              <tr>
+                <th>Room</th>
+                <th>Check-in</th>
+                <th>Check-out</th>
+                <th>Guests</th>
+                <th>Total Price</th>
+                <th>Status</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+        `;
+
+        bookings.forEach(booking => {
+          // Format dates
+          const checkIn = formatDate(booking.check_in_date);
+          const checkOut = formatDate(booking.check_out_date);
+          const totalPrice = formatCurrency(booking.total_price);
+
+          // Determine status badge color
+          let statusBadge;
+          if (booking.booking_status === 'confirmed') {
+            statusBadge = '<span class="badge badge-success">✓ Confirmed</span>';
+          } else if (booking.booking_status === 'pending') {
+            statusBadge = '<span class="badge badge-pending">⏳ Pending</span>';
+          } else {
+            statusBadge = '<span class="badge badge-cancelled">✗ Cancelled</span>';
+          }
+
+          html += `
+            <tr>
+              <td>${booking.room_number} (${booking.room_type})</td>
+              <td>${checkIn}</td>
+              <td>${checkOut}</td>
+              <td>${booking.number_of_guests}</td>
+              <td>${totalPrice}</td>
+              <td>${statusBadge}</td>
+              <td>
+                <button class="btn btn-secondary" onclick="viewBookingDetails(${booking.id})">
+                  Details
+                </button>
+                ${booking.booking_status === 'confirmed' ? `
+                  <button class="btn btn-danger" onclick="cancelBooking(${booking.id})">
+                    Cancel
+                  </button>
+                ` : ''}
+              </td>
+            </tr>
+          `;
+        });
+
+        html += `
+            </tbody>
+          </table>
+        `;
+
+        container.innerHTML = html;
+
+      } catch (error) {
+        console.error('Error loading bookings:', error);
+        document.getElementById('bookingsContainer').innerHTML = `
+          <div class="alert alert-error">
+            Error loading bookings. Please refresh the page.
+          </div>
+        `;
+      }
+    }
+
+    // ==========================================
+    // VIEW BOOKING DETAILS
+    // Display full details of a specific booking
+    // ==========================================
+
+    async function viewBookingDetails(bookingId) {
+      try {
+        const response = await apiRequest(
+          `/bookings/${bookingId}`,
+          'GET',
+          null,
+          true
+        );
+
+        const booking = response.booking;
+        const payment = response.payment;
+
+        // Create detailed booking info
+        let details = `
+          <h3>Booking Details</h3>
+          <p><strong>Booking ID:</strong> #${booking.id}</p>
+          <p><strong>Room:</strong> ${booking.room_number} (${booking.room_type})</p>
+          <p><strong>Check-in:</strong> ${formatDate(booking.check_in_date)}</p>
+          <p><strong>Check-out:</strong> ${formatDate(booking.check_out_date)}</p>
+          <p><strong>Number of Guests:</strong> ${booking.number_of_guests}</p>
+          <p><strong>Total Price:</strong> ${formatCurrency(booking.total_price)}</p>
+          <p><strong>Status:</strong> ${booking.booking_status}</p>
+        `;
+
+        if (booking.special_requests) {
+          details += `<p><strong>Special Requests:</strong> ${booking.special_requests}</p>`;
+        }
+
+        if (payment) {
+          details += `
+            <hr>
+            <h4>Payment Information</h4>
+            <p><strong>Payment Method:</strong> ${payment.payment_method}</p>
+            <p><strong>Payment Status:</strong> ${payment.payment_status}</p>
+            <p><strong>Paid Date:</strong> ${payment.paid_at ? formatDate(payment.paid_at) : 'Not yet paid'}</p>
+          `;
+        }
+
+        // Show in alert or modal
+        alert(details.replace(/<[^>]*>/g, ''));
+
+      } catch (error) {
+        console.error('Error fetching booking details:', error);
+      }
+    }
+
+    // ==========================================
+    // CANCEL BOOKING
+    // Allow user to cancel a confirmed booking
+    // ==========================================
+
+    async function cancelBooking(bookingId) {
+      // Confirm user wants to cancel
+      if (!confirm('Are you sure you want to cancel this booking?')) {
+        return;
+      }
+
+      try {
+        await apiRequest(
+          `/bookings/${bookingId}`,
+          'PUT',
+          { action: 'cancel' },
+          true
+        );
+
+        showAlert('Booking cancelled successfully', 'success');
+
+        // Reload bookings
+        setTimeout(() => {
+          loadUserBookings();
+        }, 1000);
+
+      } catch (error) {
+        console.error('Error cancelling booking:', error);
+      }
+    }
+  </script>
+</body>
+</html>

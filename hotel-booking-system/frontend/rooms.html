@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Browse Rooms - Hotel Booking</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <!-- ==========================================
+       HEADER & NAVIGATION
+       ========================================== -->
+  <header>
+    <nav>
+      <a href="user-dashboard.html" class="logo">🏨 HotelBook</a>
+      <ul class="nav-links">
+        <li><a href="user-dashboard.html">Dashboard</a></li>
+        <li><a href="rooms.html">Browse Rooms</a></li>
+        <li><a href="#" onclick="logout()">Logout</a></li>
+      </ul>
+    </nav>
+  </header>
+
+  <!-- ==========================================
+       MAIN CONTAINER
+       ========================================== -->
+  <div class="container">
+    <!-- ==========================================
+         SEARCH & FILTER SECTION
+         ========================================== -->
+    <div class="card">
+      <h2>🔍 Find Your Perfect Room</h2>
+      <form onsubmit="searchRooms(event)">
+        <div class="grid">
+          <!-- Check-in Date -->
+          <div class="form-group">
+            <label for="checkInDate">Check-in Date</label>
+            <input 
+              type="date" 
+              id="checkInDate" 
+              required
+              min=""
+            >
+          </div>
+
+          <!-- Check-out Date -->
+          <div class="form-group">
+            <label for="checkOutDate">Check-out Date</label>
+            <input 
+              type="date" 
+              id="checkOutDate" 
+              required
+              min=""
+            >
+          </div>
+
+          <!-- Number of Guests -->
+          <div class="form-group">
+            <label for="guests">Number of Guests</label>
+            <input 
+              type="number" 
+              id="guests" 
+              min="1" 
+              max="10" 
+              value="1"
+            >
+          </div>
+
+          <!-- Room Type Filter -->
+          <div class="form-group">
+            <label for="roomType">Room Type</label>
+            <select id="roomType">
+              <option value="">All Types</option>
+              <option value="single">Single</option>
+              <option value="double">Double</option>
+              <option value="suite">Suite</option>
+              <option value="deluxe">Deluxe</option>
+            </select>
+          </div>
+        </div>
+
+        <button type="submit" class="btn btn-primary btn-block">Search Rooms</button>
+      </form>
+    </div>
+
+    <!-- ==========================================
+         ROOMS DISPLAY
+         ========================================== -->
+    <div class="card">
+      <h2>Available Rooms</h2>
+      <div id="roomsContainer" class="grid">
+        <p>Enter dates to search for available rooms.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==========================================
+       ROOM DETAIL MODAL
+       Popup to show room details and book
+       ========================================== -->
+  <div id="roomModal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 1000;">
+    <div style="background: white; margin: 50px auto; padding: 30px; width: 90%; max-width: 600px; border-radius: 8px;">
+      <span onclick="closeRoomModal()" style="float: right; cursor: pointer; font-size: 24px;">&times;</span>
+      <div id="roomModalContent"></div>
+    </div>
+  </div>
+
+  <!-- ==========================================
+       FOOTER
+       ========================================== -->
+  <footer>
+    <p>&copy; 2026 Hotel Booking System. All rights reserved.</p>
+  </footer>
+
+  <!-- ==========================================
+       SCRIPTS
+       ========================================== -->
+  <script src="js/utils.js"></script>
+  <script>
+    // ==========================================
+    // PAGE INITIALIZATION
+    // ==========================================
+
+    document.addEventListener('DOMContentLoaded', () => {
+      // Check if user is logged in
+      checkAuthenticationStatus();
+
+      // Set minimum dates to today
+      const today = new Date().toISOString().split('T')[0];
+      document.getElementById('checkInDate').min = today;
+      document.getElementById('checkOutDate').min = today;
+
+      // When check-in date changes, update check-out minimum
+      document.getElementById('checkInDate').addEventListener('change', (e) => {
+        document.getElementById('checkOutDate').min = e.target.value;
+      });
+    });
+
+    // ==========================================
+    // SEARCH ROOMS
+    // Fetch available rooms based on search criteria
+    // ==========================================
+
+    async function searchRooms(event) {
+      event.preventDefault();
+
+      const checkInDate = document.getElementById('checkInDate').value;
+      const checkOutDate = document.getElementById('checkOutDate').value;
+
+      // Validate dates
+      if (new Date(checkInDate) >= new Date(checkOutDate)) {
+        showAlert('Check-out date must be after check-in date', 'error');
+        return;
+      }
+
+      try {
+        // Fetch available rooms with dynamic pricing
+        const response = await apiRequest(
+          `/rooms?checkIn=${checkInDate}&checkOut=${checkOutDate}`,
+          'GET'
+        );
+
+        const rooms = response.rooms || [];
+        const container = document.getElementById('roomsContainer');
+
+        if (rooms.length === 0) {
+          container.innerHTML = '<p>No rooms available for selected dates.</p>';
+          return;
+        }
+
+        // Display rooms as cards
+        let html = '';
+        rooms.forEach(room => {
+          const pricePerNight = formatCurrency(room.base_price);
+          const totalPrice = formatCurrency(room.calculated_price);
+          const nights = room.nights;
+
+          html += `
+            <div class="card">
+              <h3>${room.room_number} - ${room.room_type}</h3>
+              <p><strong>Capacity:</strong> ${room.capacity} guests</p>
+              <p><strong>Base Price:</strong> ${pricePerNight} per night</p>
+              <p><strong>Duration:</strong> ${nights} night(s)</p>
+              <p><strong>Total Price:</strong> <span style="font-size: 1.3em; color: #3498db; font-weight: bold;">${totalPrice}</span></p>
+              <p>${room.description || 'Comfortable room with all amenities'}</p>
+              <button class="btn btn-primary btn-block" onclick="openRoomModal(${room.id}, '${checkInDate}', '${checkOutDate}', ${room.number_of_guests || 1})">
+                Book Now
+              </button>
+            </div>
+          `;
+        });
+
+        container.innerHTML = html;
+
+      } catch (error) {
+        console.error('Error searching rooms:', error);
+      }
+    }
+
+    // ==========================================
+    // OPEN ROOM MODAL
+    // Show booking form for selected room
+    // ==========================================
+
+    async function openRoomModal(roomId, checkInDate, checkOutDate, maxGuests) {
+      try {
+        // Get room details
+        const response = await apiRequest(
+          `/rooms/${roomId}?checkIn=${checkInDate}&checkOut=${checkOutDate}`,
+          'GET'
+        );
+
+        const room = response.room;
+        const nights = calculateNights(checkInDate, checkOutDate);
+        const totalPrice = room.calculated_price;
+
+        // Build modal content
+        let html = `
+          <h2>${room.room_number} - ${room.room_type}</h2>
+          <p><strong>Capacity:</strong> ${room.capacity} guests</p>
+          <p><strong>Description:</strong> ${room.description}</p>
+          <p><strong>Base Price:</strong> ${formatCurrency(room.base_price)} per night</p>
+          <p><strong>Check-in:</strong> ${formatDate(checkInDate)}</p>
+          <p><strong>Check-out:</strong> ${formatDate(checkOutDate)}</p>
+          <p><strong>Number of Nights:</strong> ${nights}</p>
+          <p><strong style="font-size: 1.2em;">Total Price: ${formatCurrency(totalPrice)}</strong></p>
+
+          <form onsubmit="confirmBooking(event, ${roomId}, '${checkInDate}', '${checkOutDate}')">
+            <!-- Number of Guests -->
+            <div class="form-group">
+              <label for="bookingGuests">Number of Guests</label>
+              <input 
+                type="number" 
+                id="bookingGuests" 
+                min="1" 
+                max="${room.capacity}" 
+                value="1"
+                required
+              >
+            </div>
+
+            <!-- Special Requests -->
+            <div class="form-group">
+              <label for="specialRequests">Special Requests (Optional)</label>
+              <textarea 
+                id="specialRequests" 
+                placeholder="e.g., High floor, quiet room, early check-in"
+              ></textarea>
+            </div>
+
+            <!-- Pricing Breakdown -->
+            <div style="background: #f0f0f0; padding: 15px; border-radius: 5px; margin-bottom: 15px;">
+              <h4>Pricing Breakdown:</h4>
+              <p>Night 1: ${formatCurrency(room.base_price)}</p>
+              <p><strong>Total: ${formatCurrency(totalPrice)}</strong></p>
+            </div>
+
+            <!-- Submit Button -->
+            <button type="submit" class="btn btn-success btn-block">
+              Confirm Booking - ${formatCurrency(totalPrice)}
+            </button>
+          </form>
+
+          <button class="btn btn-secondary btn-block" onclick="closeRoomModal()">Cancel</button>
+        `;
+
+        document.getElementById('roomModalContent').innerHTML = html;
+        document.getElementById('roomModal').style.display = 'block';
+
+      } catch (error) {
+        console.error('Error loading room details:', error);
+      }
+    }
+
+    // ==========================================
+    // CLOSE ROOM MODAL
+    // ==========================================
+
+    function closeRoomModal() {
+      document.getElementById('roomModal').style.display = 'none';
+    }
+
+    // ==========================================
+    // CONFIRM BOOKING
+    // Send booking request to backend
+    // ==========================================
+
+    async function confirmBooking(event, roomId, checkInDate, checkOutDate) {
+      event.preventDefault();
+
+      const numberOfGuests = parseInt(document.getElementById('bookingGuests').value);
+      const specialRequests = document.getElementById('specialRequests').value;
+
+      try {
+        // Send booking request
+        const response = await apiRequest(
+          '/bookings',
+          'POST',
+          {
+            roomId,
+            checkInDate,
+            checkOutDate,
+            numberOfGuests,
+            specialRequests: specialRequests || null
+          },
+          true // Requires authentication
+        );
+
+        showAlert('Booking confirmed successfully! Redirecting to your bookings...', 'success');
+
+        // Close modal and redirect
+        closeRoomModal();
+        setTimeout(() => {
+          window.location.href = 'user-dashboard.html';
+        }, 2000);
+
+      } catch (error) {
+        console.error('Error confirming booking:', error);
+      }
+    }
+  </script>
+</body>
+</html>

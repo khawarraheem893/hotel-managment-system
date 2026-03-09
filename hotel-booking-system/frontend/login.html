@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Hotel Booking - Login & Register</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <!-- ==========================================
+       HEADER
+       ========================================== -->
+  <header>
+    <nav>
+      <a href="login.html" class="logo">🏨 HotelBook</a>
+    </nav>
+  </header>
+
+  <!-- ==========================================
+       MAIN CONTAINER
+       ========================================== -->
+  <div class="container">
+    <!-- ==========================================
+         LOGIN FORM
+         ========================================== -->
+    <div id="loginForm" class="auth-form">
+      <form onsubmit="handleLogin(event)">
+        <h2 class="text-center mb-20">Login to Your Account</h2>
+
+        <!-- Email Input -->
+        <div class="form-group">
+          <label for="loginEmail">Email Address</label>
+          <input 
+            type="email" 
+            id="loginEmail" 
+            name="email" 
+            required 
+            placeholder="your@email.com"
+          >
+        </div>
+
+        <!-- Password Input -->
+        <div class="form-group">
+          <label for="loginPassword">Password</label>
+          <input 
+            type="password" 
+            id="loginPassword" 
+            name="password" 
+            required 
+            placeholder="Enter your password"
+          >
+        </div>
+
+        <!-- Submit Button -->
+        <button type="submit" class="btn btn-primary btn-block">Login</button>
+
+        <!-- Toggle to Register -->
+        <p class="text-center mt-20">
+          Don't have an account? 
+          <a href="#" onclick="toggleAuthForms(event)">Register here</a>
+        </p>
+      </form>
+    </div>
+
+    <!-- ==========================================
+         REGISTER FORM (Hidden by default)
+         ========================================== -->
+    <div id="registerForm" class="auth-form" style="display: none;">
+      <form onsubmit="handleRegister(event)">
+        <h2 class="text-center mb-20">Create New Account</h2>
+
+        <!-- Name Input -->
+        <div class="form-group">
+          <label for="registerName">Full Name</label>
+          <input 
+            type="text" 
+            id="registerName" 
+            name="name" 
+            required 
+            placeholder="John Doe"
+          >
+        </div>
+
+        <!-- Email Input -->
+        <div class="form-group">
+          <label for="registerEmail">Email Address</label>
+          <input 
+            type="email" 
+            id="registerEmail" 
+            name="email" 
+            required 
+            placeholder="your@email.com"
+          >
+        </div>
+
+        <!-- Phone Input -->
+        <div class="form-group">
+          <label for="registerPhone">Phone Number</label>
+          <input 
+            type="text" 
+            id="registerPhone" 
+            name="phone" 
+            placeholder="+1 234 567 8900"
+          >
+        </div>
+
+        <!-- Password Input -->
+        <div class="form-group">
+          <label for="registerPassword">Password (minimum 6 characters)</label>
+          <input 
+            type="password" 
+            id="registerPassword" 
+            name="password" 
+            required 
+            minlength="6"
+            placeholder="Enter a strong password"
+          >
+        </div>
+
+        <!-- Confirm Password Input -->
+        <div class="form-group">
+          <label for="confirmPassword">Confirm Password</label>
+          <input 
+            type="password" 
+            id="confirmPassword" 
+            name="confirmPassword" 
+            required 
+            minlength="6"
+            placeholder="Confirm your password"
+          >
+        </div>
+
+        <!-- Submit Button -->
+        <button type="submit" class="btn btn-primary btn-block">Register</button>
+
+        <!-- Toggle to Login -->
+        <p class="text-center mt-20">
+          Already have an account? 
+          <a href="#" onclick="toggleAuthForms(event)">Login here</a>
+        </p>
+      </form>
+    </div>
+  </div>
+
+  <!-- ==========================================
+       FOOTER
+       ========================================== -->
+  <footer>
+    <p>&copy; 2026 Hotel Booking System. All rights reserved.</p>
+  </footer>
+
+  <!-- ==========================================
+       SCRIPTS
+       ========================================== -->
+  <script src="js/utils.js"></script>
+  <script>
+    // ==========================================
+    // PAGE INITIALIZATION
+    // ==========================================
+
+    // When page loads, check if user is already logged in
+    document.addEventListener('DOMContentLoaded', () => {
+      redirectIfLoggedIn();
+    });
+
+    // ==========================================
+    // TOGGLE BETWEEN LOGIN AND REGISTER FORMS
+    // ==========================================
+
+    function toggleAuthForms(event) {
+      event.preventDefault();
+
+      // Get both forms
+      const loginForm = document.getElementById('loginForm');
+      const registerForm = document.getElementById('registerForm');
+
+      // Toggle visibility
+      loginForm.style.display = loginForm.style.display === 'none' ? 'block' : 'none';
+      registerForm.style.display = registerForm.style.display === 'none' ? 'block' : 'none';
+    }
+
+    // ==========================================
+    // HANDLE LOGIN FORM SUBMISSION
+    // ==========================================
+
+    async function handleLogin(event) {
+      event.preventDefault(); // Prevent page reload
+
+      // Get form inputs
+      const email = document.getElementById('loginEmail').value;
+      const password = document.getElementById('loginPassword').value;
+
+      try {
+        // Send login request to backend
+        const response = await apiRequest(
+          '/auth/login',
+          'POST',
+          { email, password }
+        );
+
+        // Save token and user info
+        saveToken(response.token);
+        saveUserProfile(response.user);
+
+        // Show success message
+        showAlert('Login successful! Redirecting...', 'success');
+
+        // Redirect to dashboard after 1 second
+        setTimeout(() => {
+          window.location.href = 'user-dashboard.html';
+        }, 1000);
+
+      } catch (error) {
+        // Error is handled by apiRequest function
+        // Just show alert
+        console.error('Login error:', error);
+      }
+    }
+
+    // ==========================================
+    // HANDLE REGISTER FORM SUBMISSION
+    // ==========================================
+
+    async function handleRegister(event) {
+      event.preventDefault(); // Prevent page reload
+
+      // Get form inputs
+      const name = document.getElementById('registerName').value;
+      const email = document.getElementById('registerEmail').value;
+      const phone = document.getElementById('registerPhone').value;
+      const password = document.getElementById('registerPassword').value;
+      const confirmPassword = document.getElementById('confirmPassword').value;
+
+      // Validate passwords match
+      if (password !== confirmPassword) {
+        showAlert('Passwords do not match!', 'error');
+        return;
+      }
+
+      try {
+        // Send register request to backend
+        const response = await apiRequest(
+          '/auth/register',
+          'POST',
+          { email, password, name, phone }
+        );
+
+        // Show success message
+        showAlert('Account created successfully! Logging in...', 'success');
+
+        // Automatically login the user
+        setTimeout(() => {
+          document.getElementById('loginEmail').value = email;
+          document.getElementById('loginPassword').value = password;
+          handleLogin(new Event('submit'));
+        }, 1000);
+
+      } catch (error) {
+        // Error is handled by apiRequest function
+        console.error('Registration error:', error);
+      }
+    }
+  </script>
+</body>
+</html>

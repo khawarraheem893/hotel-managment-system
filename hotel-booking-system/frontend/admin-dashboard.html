@@ -1,0 +1,539 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Dashboard - Hotel Booking</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <!-- ==========================================
+       HEADER & NAVIGATION
+       ========================================== -->
+  <header>
+    <nav>
+      <a href="admin-dashboard.html" class="logo">🏨 HotelBook Admin</a>
+      <ul class="nav-links">
+        <li><a href="#" onclick="logout()">Logout</a></li>
+      </ul>
+    </nav>
+  </header>
+
+  <!-- ==========================================
+       MAIN CONTAINER
+       ========================================== -->
+  <div class="container">
+    <!-- ==========================================
+         DASHBOARD STATISTICS
+         ========================================== -->
+    <div class="grid">
+      <div class="card">
+        <h3>📊 Total Rooms</h3>
+        <p style="font-size: 2em; color: #3498db; font-weight: bold;" id="statRooms">-</p>
+      </div>
+      <div class="card">
+        <h3>📅 Total Bookings</h3>
+        <p style="font-size: 2em; color: #27ae60; font-weight: bold;" id="statBookings">-</p>
+      </div>
+      <div class="card">
+        <h3>👥 Total Users</h3>
+        <p style="font-size: 2em; color: #e74c3c; font-weight: bold;" id="statUsers">-</p>
+      </div>
+      <div class="card">
+        <h3>💰 Total Revenue</h3>
+        <p style="font-size: 2em; color: #f39c12; font-weight: bold;" id="statRevenue">-</p>
+      </div>
+    </div>
+
+    <!-- ==========================================
+         ADMIN TABS/SECTIONS
+         ========================================== -->
+    <div class="card">
+      <h2>Admin Control Panel</h2>
+      <div style="display: flex; gap: 10px; margin-bottom: 20px; border-bottom: 2px solid #ddd; padding-bottom: 10px;">
+        <button class="btn btn-primary" onclick="switchTab('bookings')">📋 Manage Bookings</button>
+        <button class="btn btn-primary" onclick="switchTab('rooms')">🏠 Manage Rooms</button>
+        <button class="btn btn-primary" onclick="switchTab('pricing')">💰 Manage Pricing</button>
+      </div>
+
+      <!-- ==========================================
+           MANAGE BOOKINGS TAB
+           ========================================== -->
+      <div id="bookingsTab" class="tab-content">
+        <h3>All Bookings</h3>
+        <div id="bookingsContainer">
+          <p>Loading bookings...</p>
+        </div>
+      </div>
+
+      <!-- ==========================================
+           MANAGE ROOMS TAB
+           ========================================== -->
+      <div id="roomsTab" class="tab-content" style="display: none;">
+        <h3>Manage Rooms</h3>
+
+        <!-- Add New Room Form -->
+        <div style="background: #f9f9f9; padding: 15px; border-radius: 5px; margin-bottom: 20px;">
+          <h4>Add New Room</h4>
+          <form onsubmit="addRoom(event)">
+            <div class="grid">
+              <div class="form-group">
+                <label for="roomNumber">Room Number</label>
+                <input type="text" id="roomNumber" required placeholder="e.g., 101">
+              </div>
+              <div class="form-group">
+                <label for="roomType">Room Type</label>
+                <select id="roomType" required>
+                  <option value="">Select Type</option>
+                  <option value="single">Single</option>
+                  <option value="double">Double</option>
+                  <option value="suite">Suite</option>
+                  <option value="deluxe">Deluxe</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label for="capacity">Capacity</label>
+                <input type="number" id="capacity" min="1" max="10" required placeholder="e.g., 2">
+              </div>
+              <div class="form-group">
+                <label for="basePrice">Base Price</label>
+                <input type="number" id="basePrice" min="0" step="0.01" required placeholder="e.g., 100.00">
+              </div>
+            </div>
+            <div class="form-group">
+              <label for="description">Description</label>
+              <textarea id="description" placeholder="Room amenities and features"></textarea>
+            </div>
+            <button type="submit" class="btn btn-success">Add Room</button>
+          </form>
+        </div>
+
+        <!-- Rooms List -->
+        <h4>Current Rooms</h4>
+        <div id="roomsContainer">
+          <p>Loading rooms...</p>
+        </div>
+      </div>
+
+      <!-- ==========================================
+           MANAGE PRICING TAB
+           ========================================== -->
+      <div id="pricingTab" class="tab-content" style="display: none;">
+        <h3>Manage Dynamic Pricing</h3>
+
+        <!-- Add Pricing Rule Form -->
+        <div style="background: #f9f9f9; padding: 15px; border-radius: 5px; margin-bottom: 20px;">
+          <h4>Add Pricing Rule</h4>
+          <form onsubmit="addPricingRule(event)">
+            <div class="grid">
+              <div class="form-group">
+                <label for="pricingRoomId">Room</label>
+                <select id="pricingRoomId" required>
+                  <option value="">Select Room</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label for="pricingType">Pricing Type</label>
+                <select id="pricingType" required onchange="togglePricingDates()">
+                  <option value="weekend">Weekend (Sat & Sun)</option>
+                  <option value="seasonal">Seasonal</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label for="multiplier">Price Multiplier</label>
+                <input type="number" id="multiplier" min="0.1" max="5" step="0.1" required placeholder="e.g., 1.5 for 50% increase">
+              </div>
+            </div>
+
+            <!-- Seasonal Dates (Hidden by default) -->
+            <div id="seasonalDatesContainer" style="display: none;">
+              <div class="grid">
+                <div class="form-group">
+                  <label for="startDate">Start Date</label>
+                  <input type="date" id="startDate">
+                </div>
+                <div class="form-group">
+                  <label for="endDate">End Date</label>
+                  <input type="date" id="endDate">
+                </div>
+              </div>
+            </div>
+
+            <button type="submit" class="btn btn-success">Add Pricing Rule</button>
+          </form>
+        </div>
+
+        <p class="alert alert-info">
+          💡 <strong>How it works:</strong><br>
+          - Weekend pricing applies to Saturdays and Sundays<br>
+          - Seasonal pricing applies to specific date ranges<br>
+          - Example: Set multiplier to 1.5 for 50% price increase (Base $100 → $150)
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==========================================
+       FOOTER
+       ========================================== -->
+  <footer>
+    <p>&copy; 2026 Hotel Booking System. All rights reserved.</p>
+  </footer>
+
+  <!-- ==========================================
+       SCRIPTS
+       ========================================== -->
+  <script src="js/utils.js"></script>
+  <script>
+    // ==========================================
+    // PAGE INITIALIZATION
+    // ==========================================
+
+    document.addEventListener('DOMContentLoaded', () => {
+      // Check if user is logged in and is admin
+      checkAuthenticationStatus();
+      checkAdminAccess();
+
+      // Load dashboard data
+      loadDashboardStats();
+      loadAllBookings();
+      loadAllRooms();
+      loadRoomsForPricing();
+    });
+
+    // ==========================================
+    // CHECK ADMIN ACCESS
+    // Verify user has admin role
+    // ==========================================
+
+    async function checkAdminAccess() {
+      const user = getUserProfile();
+      if (!user || user.role !== 'admin') {
+        showAlert('Admin access required!', 'error');
+        window.location.href = 'login.html';
+      }
+    }
+
+    // ==========================================
+    // LOAD DASHBOARD STATISTICS
+    // ==========================================
+
+    async function loadDashboardStats() {
+      try {
+        const response = await apiRequest(
+          '/admin/stats',
+          'GET',
+          null,
+          true
+        );
+
+        const stats = response.stats;
+        document.getElementById('statRooms').textContent = stats.totalRooms;
+        document.getElementById('statBookings').textContent = stats.totalBookings;
+        document.getElementById('statUsers').textContent = stats.totalUsers;
+        document.getElementById('statRevenue').textContent = formatCurrency(stats.totalRevenue);
+
+      } catch (error) {
+        console.error('Error loading stats:', error);
+      }
+    }
+
+    // ==========================================
+    // SWITCH BETWEEN TABS
+    // ==========================================
+
+    function switchTab(tabName) {
+      // Hide all tabs
+      document.getElementById('bookingsTab').style.display = 'none';
+      document.getElementById('roomsTab').style.display = 'none';
+      document.getElementById('pricingTab').style.display = 'none';
+
+      // Show selected tab
+      document.getElementById(tabName + 'Tab').style.display = 'block';
+
+      // Reload data if needed
+      if (tabName === 'bookings') {
+        loadAllBookings();
+      } else if (tabName === 'rooms') {
+        loadAllRooms();
+      }
+    }
+
+    // ==========================================
+    // LOAD ALL BOOKINGS (Admin view)
+    // ==========================================
+
+    async function loadAllBookings() {
+      try {
+        const response = await apiRequest(
+          '/admin/bookings',
+          'GET',
+          null,
+          true
+        );
+
+        const bookings = response.bookings || [];
+        const container = document.getElementById('bookingsContainer');
+
+        if (bookings.length === 0) {
+          container.innerHTML = '<p>No bookings found.</p>';
+          return;
+        }
+
+        let html = `
+          <table>
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>User</th>
+                <th>Room</th>
+                <th>Check-in</th>
+                <th>Check-out</th>
+                <th>Total Price</th>
+                <th>Status</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+        `;
+
+        bookings.forEach(booking => {
+          const checkIn = formatDate(booking.check_in_date);
+          const checkOut = formatDate(booking.check_out_date);
+          const totalPrice = formatCurrency(booking.total_price);
+
+          let statusBadge;
+          if (booking.booking_status === 'confirmed') {
+            statusBadge = '<span class="badge badge-success">✓ Confirmed</span>';
+          } else if (booking.booking_status === 'pending') {
+            statusBadge = '<span class="badge badge-pending">⏳ Pending</span>';
+          } else {
+            statusBadge = '<span class="badge badge-cancelled">✗ Cancelled</span>';
+          }
+
+          html += `
+            <tr>
+              <td>#${booking.id}</td>
+              <td>${booking.user_name} (${booking.email})</td>
+              <td>${booking.room_number} - ${booking.room_type}</td>
+              <td>${checkIn}</td>
+              <td>${checkOut}</td>
+              <td>${totalPrice}</td>
+              <td>${statusBadge}</td>
+              <td>
+                <select onchange="updateBookingStatus(${booking.id}, this.value)">
+                  <option value="">Change Status</option>
+                  <option value="pending">Pending</option>
+                  <option value="confirmed">Confirmed</option>
+                  <option value="cancelled">Cancelled</option>
+                </select>
+              </td>
+            </tr>
+          `;
+        });
+
+        html += `
+            </tbody>
+          </table>
+        `;
+
+        container.innerHTML = html;
+
+      } catch (error) {
+        console.error('Error loading bookings:', error);
+      }
+    }
+
+    // ==========================================
+    // UPDATE BOOKING STATUS
+    // ==========================================
+
+    async function updateBookingStatus(bookingId, status) {
+      if (!status) return;
+
+      try {
+        await apiRequest(
+          `/admin/bookings/${bookingId}`,
+          'PUT',
+          { bookingStatus: status },
+          true
+        );
+
+        showAlert('Booking status updated!', 'success');
+        loadAllBookings();
+
+      } catch (error) {
+        console.error('Error updating booking:', error);
+      }
+    }
+
+    // ==========================================
+    // LOAD ALL ROOMS
+    // ==========================================
+
+    async function loadAllRooms() {
+      try {
+        const response = await apiRequest('/rooms', 'GET');
+        const rooms = response.rooms || [];
+        const container = document.getElementById('roomsContainer');
+
+        if (rooms.length === 0) {
+          container.innerHTML = '<p>No rooms found.</p>';
+          return;
+        }
+
+        let html = '<div class="grid">';
+        rooms.forEach(room => {
+          html += `
+            <div class="card">
+              <h4>${room.room_number} - ${room.room_type}</h4>
+              <p><strong>Capacity:</strong> ${room.capacity}</p>
+              <p><strong>Base Price:</strong> ${formatCurrency(room.base_price)}</p>
+              <p><strong>Status:</strong> ${room.is_available ? '✓ Available' : '✗ Unavailable'}</p>
+              <button class="btn btn-secondary" onclick="editRoom(${room.id})">Edit</button>
+              <button class="btn btn-danger" onclick="deleteRoom(${room.id})">Delete</button>
+            </div>
+          `;
+        });
+        html += '</div>';
+
+        container.innerHTML = html;
+
+      } catch (error) {
+        console.error('Error loading rooms:', error);
+      }
+    }
+
+    // ==========================================
+    // ADD NEW ROOM
+    // ==========================================
+
+    async function addRoom(event) {
+      event.preventDefault();
+
+      const roomNumber = document.getElementById('roomNumber').value;
+      const roomType = document.getElementById('roomType').value;
+      const capacity = parseInt(document.getElementById('capacity').value);
+      const basePrice = parseFloat(document.getElementById('basePrice').value);
+      const description = document.getElementById('description').value;
+
+      try {
+        await apiRequest(
+          '/admin/rooms',
+          'POST',
+          { roomNumber, roomType, capacity, basePrice, description },
+          true
+        );
+
+        showAlert('Room added successfully!', 'success');
+        document.querySelector('#roomsTab form').reset();
+        loadAllRooms();
+
+      } catch (error) {
+        console.error('Error adding room:', error);
+      }
+    }
+
+    // ==========================================
+    // DELETE ROOM
+    // ==========================================
+
+    async function deleteRoom(roomId) {
+      if (!confirm('Are you sure you want to delete this room?')) return;
+
+      try {
+        await apiRequest(
+          `/admin/rooms/${roomId}`,
+          'DELETE',
+          null,
+          true
+        );
+
+        showAlert('Room deleted successfully!', 'success');
+        loadAllRooms();
+
+      } catch (error) {
+        console.error('Error deleting room:', error);
+      }
+    }
+
+    // ==========================================
+    // LOAD ROOMS FOR PRICING DROPDOWN
+    // ==========================================
+
+    async function loadRoomsForPricing() {
+      try {
+        const response = await apiRequest('/rooms', 'GET');
+        const rooms = response.rooms || [];
+        const select = document.getElementById('pricingRoomId');
+
+        rooms.forEach(room => {
+          const option = document.createElement('option');
+          option.value = room.id;
+          option.textContent = `${room.room_number} - ${room.room_type}`;
+          select.appendChild(option);
+        });
+
+      } catch (error) {
+        console.error('Error loading rooms:', error);
+      }
+    }
+
+    // ==========================================
+    // TOGGLE PRICING DATES VISIBILITY
+    // Show date fields only for seasonal pricing
+    // ==========================================
+
+    function togglePricingDates() {
+      const type = document.getElementById('pricingType').value;
+      const container = document.getElementById('seasonalDatesContainer');
+      const startDate = document.getElementById('startDate');
+      const endDate = document.getElementById('endDate');
+
+      if (type === 'seasonal') {
+        container.style.display = 'block';
+        startDate.required = true;
+        endDate.required = true;
+      } else {
+        container.style.display = 'none';
+        startDate.required = false;
+        endDate.required = false;
+      }
+    }
+
+    // ==========================================
+    // ADD PRICING RULE
+    // ==========================================
+
+    async function addPricingRule(event) {
+      event.preventDefault();
+
+      const roomId = parseInt(document.getElementById('pricingRoomId').value);
+      const pricingType = document.getElementById('pricingType').value;
+      const multiplier = parseFloat(document.getElementById('multiplier').value);
+      const startDate = document.getElementById('startDate').value || null;
+      const endDate = document.getElementById('endDate').value || null;
+
+      if (pricingType === 'seasonal' && (!startDate || !endDate)) {
+        showAlert('Please provide start and end dates for seasonal pricing', 'error');
+        return;
+      }
+
+      try {
+        await apiRequest(
+          '/admin/pricing',
+          'POST',
+          { roomId, pricingType, multiplier, startDate, endDate },
+          true
+        );
+
+        showAlert('Pricing rule added successfully!', 'success');
+        document.querySelector('#pricingTab form').reset();
+
+      } catch (error) {
+        console.error('Error adding pricing rule:', error);
+      }
+    }
+  </script>
+</body>
+</html>
